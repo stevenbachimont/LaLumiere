@@ -94,28 +94,7 @@
 	/>
 </div>
 
-<div class="actions-section">
-	{#if installPrompt}
-		<MobileButton
-			variant="outline"
-			size="lg"
-			icon="📲"
-			on:click={installApp}
-			class="full-width"
-		>
-			Installer l'application
-		</MobileButton>
-	{/if}
-	
-	<MobileButton
-		variant="primary"
-		size="lg"
-		on:click={handleStart}
-		class="full-width"
-	>
-		Commencer
-	</MobileButton>
-</div>
+
 
 <style>
 	.hero-section {

@@ -1,70 +1,93 @@
 <script lang="ts">
-	import { onMount } from 'svelte';
 	import MobileButton from './MobileButton.svelte';
 	import MobileCard from './MobileCard.svelte';
+	import Camera from './Camera.svelte';
 
 	// États de l'application
 	let isCapturing = false;
+	let cameraComponent: Camera;
 	let hasPermission = false;
-	let stream: MediaStream | null = null;
-	let videoElement: HTMLVideoElement;
-	let canvas: HTMLCanvasElement;
-	let context: CanvasRenderingContext2D;
+	let videoElement: HTMLVideoElement | undefined = undefined;
 
 	// Images capturées
 	let capturedImages: string[] = [];
 	let currentImage: string | null = null;
+	
+	// États de traitement des négatifs
+	let isGrayscale = true;
+	let isInverted = false;
+	let brightness = 0;
+	let contrast = 100;
+	let showPreview = false;
 
-	onMount(async () => {
-		await requestCameraPermission();
-	});
+	function handleCameraReady() {
+		hasPermission = true;
+		videoElement = cameraComponent.videoElement;
+		console.log('Caméra prête pour la numérisation');
+	}
 
-	async function requestCameraPermission() {
-		try {
-			const constraints = {
-				video: {
-					width: { ideal: 1280 },
-					height: { ideal: 720 }
-				}
-			};
-
-			stream = await navigator.mediaDevices.getUserMedia(constraints);
-			videoElement.srcObject = stream;
-			hasPermission = true;
-			
-			// Initialiser le canvas
-			videoElement.addEventListener('loadedmetadata', () => {
-				if (canvas) {
-					const ctx = canvas.getContext('2d');
-					if (ctx) {
-						context = ctx;
-						canvas.width = videoElement.videoWidth || 640;
-						canvas.height = videoElement.videoHeight || 480;
-					}
-				}
-			});
-		} catch (error) {
-			console.error('Erreur d\'accès à la caméra:', error);
-			hasPermission = false;
-		}
+	function handleCameraError(error: Error) {
+		hasPermission = false;
+		console.error('Erreur caméra:', error);
 	}
 
 	function captureImage() {
-		if (!videoElement || !canvas || !context) return;
+		if (!cameraComponent) return;
 
-		// Dessiner la frame vidéo sur le canvas
-		context.drawImage(videoElement, 0, 0, canvas.width, canvas.height);
+		// Utiliser le composant Camera pour capturer et traiter l'image
+		const imageData = cameraComponent.processImage(processNegativeImage);
 		
-		// Convertir en image
-		const imageData = canvas.toDataURL('image/jpeg', 0.8);
-		capturedImages = [...capturedImages, imageData];
-		currentImage = imageData;
+		if (imageData) {
+			capturedImages = [...capturedImages, imageData];
+			currentImage = imageData;
+			
+			// Effet de flash
+			isCapturing = true;
+			setTimeout(() => {
+				isCapturing = false;
+			}, 200);
+		}
+	}
+
+	function processNegativeImage(imageData: ImageData): ImageData {
+		const data = imageData.data;
 		
-		// Effet de flash
-		isCapturing = true;
-		setTimeout(() => {
-			isCapturing = false;
-		}, 200);
+		// Traiter chaque pixel
+		for (let i = 0; i < data.length; i += 4) {
+			let r = data[i];
+			let g = data[i + 1];
+			let b = data[i + 2];
+			
+			// Convertir en niveaux de gris si activé
+			if (isGrayscale) {
+				const gray = Math.round(0.299 * r + 0.587 * g + 0.114 * b);
+				r = g = b = gray;
+			}
+			
+			// Inverser les couleurs si activé (négatif → positif)
+			if (isInverted) {
+				r = 255 - r;
+				g = 255 - g;
+				b = 255 - b;
+			}
+			
+			// Ajuster la luminosité
+			r = Math.max(0, Math.min(255, r + brightness));
+			g = Math.max(0, Math.min(255, g + brightness));
+			b = Math.max(0, Math.min(255, b + brightness));
+			
+			// Ajuster le contraste
+			const factor = (259 * (contrast + 255)) / (255 * (259 - contrast));
+			r = Math.max(0, Math.min(255, factor * (r - 128) + 128));
+			g = Math.max(0, Math.min(255, factor * (g - 128) + 128));
+			b = Math.max(0, Math.min(255, factor * (b - 128) + 128));
+			
+			data[i] = r;
+			data[i + 1] = g;
+			data[i + 2] = b;
+		}
+		
+		return imageData;
 	}
 
 	function processImage() {
@@ -91,38 +114,39 @@
 <div class="numerise-container">
 	<!-- Zone de prévisualisation vidéo -->
 	<div class="video-section">
-		{#if hasPermission}
-			<div class="video-container" class:capturing={isCapturing}>
-				<video
-					bind:this={videoElement}
-					autoplay
-					muted
-					playsinline
-					class="camera-preview"
-				></video>
-				<canvas bind:this={canvas} class="capture-canvas"></canvas>
-				
-				<!-- Overlay de capture -->
-				<div class="capture-overlay">
-					<div class="capture-frame"></div>
-					<div class="capture-guide">
-						<div class="guide-line horizontal top"></div>
-						<div class="guide-line horizontal bottom"></div>
-						<div class="guide-line vertical left"></div>
-						<div class="guide-line vertical right"></div>
+		<Camera
+			bind:this={cameraComponent}
+			width={640}
+			height={480}
+			facingMode="environment"
+			onCameraReady={handleCameraReady}
+			onError={handleCameraError}
+		>
+			{#if hasPermission && videoElement}
+				<div class="video-container" class:capturing={isCapturing}>
+					<video
+						bind:this={videoElement}
+						autoplay
+						muted
+						playsinline
+						class="camera-preview"
+						class:grayscale={isGrayscale}
+						class:inverted={isInverted}
+						style="filter: brightness({100 + brightness}%) contrast({contrast}%);"
+					></video>
+					<!-- Overlay de capture -->
+					<div class="capture-overlay">
+						<div class="capture-frame"></div>
+						<div class="capture-guide">
+							<div class="guide-line horizontal top"></div>
+							<div class="guide-line horizontal bottom"></div>
+							<div class="guide-line vertical left"></div>
+							<div class="guide-line vertical right"></div>
+						</div>
 					</div>
 				</div>
-			</div>
-		{:else}
-			<div class="permission-request">
-				<div class="permission-icon">📷</div>
-				<h3>Accès à la caméra requis</h3>
-				<p>Autorisez l'accès à votre caméra pour numériser vos négatifs</p>
-				<MobileButton variant="primary" on:click={requestCameraPermission}>
-					Autoriser la caméra
-				</MobileButton>
-			</div>
-		{/if}
+			{/if}
+		</Camera>
 	</div>
 
 	<!-- Contrôles de capture -->
@@ -137,6 +161,56 @@
 				>
 					📸 Capturer
 				</MobileButton>
+			</div>
+			
+			<!-- Contrôles de traitement des négatifs -->
+			<div class="negative-controls">
+				<div class="control-group">
+					<label class="control-label">
+						<input type="checkbox" bind:checked={isGrayscale} />
+						<span>Niveau de gris</span>
+					</label>
+					<label class="control-label">
+						<input type="checkbox" bind:checked={isInverted} />
+						<span>Inverser (négatif → positif)</span>
+					</label>
+				</div>
+				
+				<div class="slider-group">
+					<div class="slider-control">
+						<label for="brightness-slider">Luminosité: {brightness}</label>
+						<input 
+							id="brightness-slider"
+							type="range" 
+							min="-100" 
+							max="100" 
+							bind:value={brightness}
+							class="slider"
+						/>
+					</div>
+					
+					<div class="slider-control">
+						<label for="contrast-slider">Contraste: {contrast}%</label>
+						<input 
+							id="contrast-slider"
+							type="range" 
+							min="0" 
+							max="200" 
+							bind:value={contrast}
+							class="slider"
+						/>
+					</div>
+				</div>
+				
+				<div class="preview-controls">
+					<MobileButton 
+						variant="outline" 
+						size="sm" 
+						on:click={() => showPreview = !showPreview}
+					>
+						{showPreview ? 'Masquer' : 'Aperçu'} en temps réel
+					</MobileButton>
+				</div>
 			</div>
 		{/if}
 	</div>
@@ -245,16 +319,19 @@
 		width: 100%;
 		height: 100%;
 		object-fit: cover;
+		transition: filter 0.3s ease;
 	}
-
-	.capture-canvas {
-		position: absolute;
-		top: 0;
-		left: 0;
-		width: 100%;
-		height: 100%;
-		opacity: 0;
-		pointer-events: none;
+	
+	.camera-preview.grayscale {
+		filter: grayscale(100%);
+	}
+	
+	.camera-preview.inverted {
+		filter: invert(100%);
+	}
+	
+	.camera-preview.grayscale.inverted {
+		filter: grayscale(100%) invert(100%);
 	}
 
 	.capture-overlay {
@@ -341,6 +418,21 @@
 		margin: 0 0 2rem 0;
 	}
 
+	.loading-spinner {
+		width: 40px;
+		height: 40px;
+		border: 4px solid #e5e7eb;
+		border-top: 4px solid #3b82f6;
+		border-radius: 50%;
+		animation: spin 1s linear infinite;
+		margin: 0 auto 1rem auto;
+	}
+
+	@keyframes spin {
+		0% { transform: rotate(0deg); }
+		100% { transform: rotate(360deg); }
+	}
+
 	.controls-section {
 		padding: 1rem 1.5rem;
 		background: white;
@@ -358,6 +450,92 @@
 		border-radius: 50%;
 		font-size: 1.5rem;
 		box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+	}
+
+	.negative-controls {
+		margin-top: 1.5rem;
+		padding: 1rem;
+		background: #f8fafc;
+		border-radius: 0.75rem;
+		border: 1px solid #e5e7eb;
+	}
+
+	.control-group {
+		display: flex;
+		flex-direction: column;
+		gap: 0.75rem;
+		margin-bottom: 1.5rem;
+	}
+
+	.control-label {
+		display: flex;
+		align-items: center;
+		gap: 0.5rem;
+		font-size: 0.875rem;
+		font-weight: 500;
+		color: #374151;
+		cursor: pointer;
+	}
+
+	.control-label input[type="checkbox"] {
+		width: 1.25rem;
+		height: 1.25rem;
+		accent-color: #3b82f6;
+	}
+
+	.slider-group {
+		display: flex;
+		flex-direction: column;
+		gap: 1rem;
+		margin-bottom: 1.5rem;
+	}
+
+	.slider-control {
+		display: flex;
+		flex-direction: column;
+		gap: 0.5rem;
+	}
+
+	.slider-control label {
+		font-size: 0.875rem;
+		font-weight: 500;
+		color: #374151;
+	}
+
+	.slider {
+		width: 100%;
+		height: 6px;
+		border-radius: 3px;
+		background: #e5e7eb;
+		outline: none;
+		-webkit-appearance: none;
+		appearance: none;
+	}
+
+	.slider::-webkit-slider-thumb {
+		-webkit-appearance: none;
+		appearance: none;
+		width: 20px;
+		height: 20px;
+		border-radius: 50%;
+		background: #3b82f6;
+		cursor: pointer;
+		box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+	}
+
+	.slider::-moz-range-thumb {
+		width: 20px;
+		height: 20px;
+		border-radius: 50%;
+		background: #3b82f6;
+		cursor: pointer;
+		border: none;
+		box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+	}
+
+	.preview-controls {
+		display: flex;
+		justify-content: center;
 	}
 
 	.gallery-section {
