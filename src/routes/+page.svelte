@@ -54,9 +54,9 @@
 	<div class="hero-content">
 		<div class="app-icon">
 			<svg width="80" height="80" viewBox="0 0 80 80" fill="none" xmlns="http://www.w3.org/2000/svg">
-				<rect width="80" height="80" rx="16" fill="#3b82f6"/>
-				<circle cx="40" cy="40" r="20" fill="white"/>
-				<circle cx="40" cy="40" r="10" fill="#3b82f6"/>
+				<rect width="80" height="80" rx="16" fill="#000000"/>
+				<circle cx="40" cy="40" r="20" fill=#FF69B4/>
+				<circle cx="40" cy="40" r="10" fill="#000000"/>
 			</svg>
 		</div>
 		<h1>La Lumière</h1>
