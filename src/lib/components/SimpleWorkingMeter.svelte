@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { onMount, onDestroy } from 'svelte';
+	import Camera from './Camera.svelte';
 
 	// États
 	let isMeasuring = $state(false);
@@ -7,10 +7,11 @@
 	let currentBrightness = $state(0);
 	let luxValue = $state(0);
 	let evValue = $state(0);
-	let stream: MediaStream | null = null;
-	let video: HTMLVideoElement;
-	let canvas: HTMLCanvasElement;
-	let ctx: CanvasRenderingContext2D;
+	let cameraComponent: Camera;
+	let videoElement = $state<HTMLVideoElement | undefined>(undefined);
+	let canvas = $state<HTMLCanvasElement | undefined>(undefined);
+	let context = $state<CanvasRenderingContext2D | undefined>(undefined);
+	let hasPermission = $state(false);
 
 	// Réglages
 	let aperture = $state('f/8');
@@ -26,87 +27,72 @@
 	// Valeurs de vitesse disponibles
 	const shutterSpeedValues = [1, 2, 4, 8, 15, 30, 60, 125, 250, 500, 1000, 2000, 4000];
 
-	onMount(async () => {
-		try {
-			// Demander l'accès à la caméra
-			stream = await navigator.mediaDevices.getUserMedia({ video: true });
-			
-			// Attendre que les éléments soient prêts
-			await new Promise(resolve => setTimeout(resolve, 200));
-			
-			// Configurer la vidéo
-			video.srcObject = stream;
-			video.play();
-			
-			// Configurer le canvas
-			canvas.width = 320;
-			canvas.height = 240;
-			ctx = canvas.getContext('2d')!;
-			
-			// Démarrer la mesure
-			isMeasuring = true;
-			measure();
-			
-		} catch (error) {
-			console.error('Erreur caméra:', error);
-		}
-	});
+	function handleCameraReady() {
+		// Démarrer la mesure quand la caméra est prête
+		isMeasuring = true;
+		measure();
+	}
 
-	onDestroy(() => {
-		if (stream) {
-			stream.getTracks().forEach(track => track.stop());
-		}
-	});
+	function handleCameraError(error: Error) {
+		console.error('Erreur d\'accès à la caméra:', error);
+	}
 
 	function measure() {
-		if (!isMeasuring || !video || !ctx) return;
+		if (!isMeasuring || !cameraComponent) return;
 
 		try {
-			// Dessiner la vidéo sur le canvas
-			ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+			// Utiliser le composant Camera pour capturer l'image
+			const imageData = cameraComponent.captureImage();
+			if (!imageData) return;
 			
-			// Obtenir les données d'image
-			const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
-			const data = imageData.data;
+			// Créer un canvas temporaire pour analyser l'image
+			const tempCanvas = document.createElement('canvas');
+			const tempCtx = tempCanvas.getContext('2d');
+			if (!tempCtx) return;
 			
-			// Convertir en noir et blanc et calculer la luminosité moyenne
-			let total = 0;
-			for (let i = 0; i < data.length; i += 4) {
-				const r = data[i];
-				const g = data[i + 1];
-				const b = data[i + 2];
+			// Charger l'image capturée
+			const img = new Image();
+			img.onload = () => {
+				tempCanvas.width = img.width;
+				tempCanvas.height = img.height;
+				tempCtx.drawImage(img, 0, 0);
 				
-				// Conversion en niveaux de gris avec pondération luminance
-				// Formule standard : 0.299*R + 0.587*G + 0.114*B
-				const gray = Math.round(0.299 * r + 0.587 * g + 0.114 * b);
+				// Obtenir les données d'image
+				const imageData = tempCtx.getImageData(0, 0, tempCanvas.width, tempCanvas.height);
+				const data = imageData.data;
 				
-				// Appliquer le niveau de gris aux 3 canaux RGB
-				data[i] = gray;     // Rouge
-				data[i + 1] = gray; // Vert
-				data[i + 2] = gray; // Bleu
+				// Convertir en noir et blanc et calculer la luminosité moyenne
+				let total = 0;
+				for (let i = 0; i < data.length; i += 4) {
+					const r = data[i];
+					const g = data[i + 1];
+					const b = data[i + 2];
+					
+					// Conversion en niveaux de gris avec pondération luminance
+					// Formule standard : 0.299*R + 0.587*G + 0.114*B
+					const gray = Math.round(0.299 * r + 0.587 * g + 0.114 * b);
+					
+					total += gray;
+				}
 				
-				total += gray;
-			}
-			
-			// Remettre l'image en noir et blanc sur le canvas (optionnel, pour debug)
-			// ctx.putImageData(imageData, 0, 0);
-			
-			currentBrightness = Math.round(total / (data.length / 4));
-			
-			// Mettre à jour seulement si la mesure n'est pas bloquée
-			if (!isLocked) {
-				// Calculer l'EV directement à partir de la luminosité de la caméra
-				// Approche simplifiée basée sur des tables de référence
-				evValue = calculateEVFromBrightness(currentBrightness, iso);
+				currentBrightness = Math.round(total / (data.length / 4));
 				
-				// Calculer le lux approximatif pour l'affichage
-				luxValue = calculateLuxFromEV(evValue, iso);
-				
-				console.log(`Mesure: luminance=${currentBrightness}, lux=${luxValue.toFixed(0)}, ISO=${iso}, EV=${evValue}`);
-				
-				// Calculer les réglages
-				calculateSettings();
-			}
+				// Mettre à jour seulement si la mesure n'est pas bloquée
+				if (!isLocked) {
+					// Calculer l'EV directement à partir de la luminosité de la caméra
+					// Approche simplifiée basée sur des tables de référence
+					evValue = calculateEVFromBrightness(currentBrightness, iso);
+					
+					// Calculer le lux approximatif pour l'affichage
+					luxValue = calculateLuxFromEV(evValue, iso);
+					
+					console.log(`Mesure: luminance=${currentBrightness}, lux=${luxValue.toFixed(0)}, ISO=${iso}, EV=${evValue}`);
+					
+					// Calculer les réglages
+					calculateSettings();
+				}
+			};
+			img.src = imageData;
 			
 		} catch (error) {
 			console.error('Erreur mesure:', error);
@@ -305,10 +291,6 @@
 </script>
 
 <div class="meter">
-	<!-- Caméra cachée -->
-	<video bind:this={video} autoplay muted playsinline style="display: none;"></video>
-	<canvas bind:this={canvas} style="display: none;"></canvas>
-
 	<!-- Interface -->
 	<div class="status">
 		<div class="dot" class:active={isMeasuring}></div>
@@ -316,7 +298,18 @@
 		
 		<!-- Vignette de la vidéo -->
 		<div class="video-preview">
-			<video bind:this={video} autoplay muted playsinline class="preview-video"></video>
+			<Camera
+				bind:this={cameraComponent}
+				width={60}
+				height={45}
+				facingMode="environment"
+				onCameraReady={handleCameraReady}
+				onError={handleCameraError}
+				bind:videoElement
+				bind:canvas
+				bind:context
+				bind:hasPermission
+			/>
 		</div>
 		
 		<button class="lock-btn" class:locked={isLocked} onclick={toggleLock}>
@@ -433,11 +426,16 @@
 		flex-shrink: 0;
 	}
 
-	.preview-video {
+	.video-preview :global(.camera-container) {
+		width: 100%;
+		height: 100%;
+	}
+
+	.video-preview :global(.camera-video) {
 		width: 100%;
 		height: 100%;
 		object-fit: cover;
-		border-radius: 8px;
+		border-radius: 6px;
 	}
 
 	.status {
