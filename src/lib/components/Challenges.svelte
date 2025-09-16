@@ -2,6 +2,7 @@
 	import { onMount } from 'svelte';
 	import MobileButton from './MobileButton.svelte';
 	import MobileCard from './MobileCard.svelte';
+	import CadrerChallenge from './CadrerChallenge.svelte';
 
 	// Types de défis
 	interface Challenge {
@@ -21,6 +22,7 @@
 	let challengeTimer: number = 0;
 	let isChallengeActive = false;
 	let timerInterval: number | null = null;
+	let showCadrerChallenge = false;
 
 	onMount(() => {
 		initializeChallenges();
@@ -30,57 +32,12 @@
 	function initializeChallenges() {
 		challenges = [
 			{
-				id: 'golden-hour',
-				title: 'Heure Dorée',
-				description: 'Prenez une photo pendant l\'heure dorée (1h après le lever ou avant le coucher du soleil)',
-				icon: '🌅',
-				difficulty: 'facile',
-				timeLimit: 60,
-				completed: false
-			},
-			{
-				id: 'rule-of-thirds',
-				title: 'Règle des Tiers',
-				description: 'Composez une image en respectant la règle des tiers',
-				icon: '📐',
+				id: 'cadrer',
+				title: 'CADRER',
+				description: 'Recréez exactement le cadrage de l\'image de référence',
+				icon: '🎯',
 				difficulty: 'moyen',
-				timeLimit: 30,
-				completed: false
-			},
-			{
-				id: 'black-white',
-				title: 'Noir et Blanc',
-				description: 'Créez une image en noir et blanc avec un fort contraste',
-				icon: '⚫',
-				difficulty: 'moyen',
-				timeLimit: 45,
-				completed: false
-			},
-			{
-				id: 'macro',
-				title: 'Macro',
-				description: 'Photographiez un détail en macro (fleur, insecte, texture)',
-				icon: '🔍',
-				difficulty: 'difficile',
-				timeLimit: 60,
-				completed: false
-			},
-			{
-				id: 'street-photography',
-				title: 'Photo de Rue',
-				description: 'Capturez un moment authentique dans la rue',
-				icon: '🚶',
-				difficulty: 'difficile',
-				timeLimit: 90,
-				completed: false
-			},
-			{
-				id: 'silhouette',
-				title: 'Silhouette',
-				description: 'Créez une silhouette contre un coucher de soleil',
-				icon: '👤',
-				difficulty: 'moyen',
-				timeLimit: 30,
+				timeLimit: 15,
 				completed: false
 			}
 		];
@@ -116,17 +73,20 @@
 	}
 
 	function startChallenge(challenge: Challenge) {
-		activeChallenge = challenge;
-		challengeTimer = challenge.timeLimit * 60; // Convertir en secondes
-		isChallengeActive = true;
-		
-		// Démarrer le timer
-		timerInterval = setInterval(() => {
-			challengeTimer--;
-			if (challengeTimer <= 0) {
-				completeChallenge(false);
-			}
-		}, 1000);
+		if (challenge.id === 'cadrer') {
+			showCadrerChallenge = true;
+			activeChallenge = challenge;
+			challengeTimer = challenge.timeLimit * 60; // Convertir en secondes
+			isChallengeActive = true;
+			
+			// Démarrer le timer
+			timerInterval = setInterval(() => {
+				challengeTimer--;
+				if (challengeTimer <= 0) {
+					completeChallenge(false);
+				}
+			}, 1000);
+		}
 	}
 
 	function completeChallenge(success: boolean) {
@@ -152,6 +112,12 @@
 		activeChallenge = null;
 		isChallengeActive = false;
 		challengeTimer = 0;
+		showCadrerChallenge = false;
+	}
+
+	function goBackFromChallenge() {
+		showCadrerChallenge = false;
+		completeChallenge(false);
 	}
 
 	function formatTime(seconds: number): string {
@@ -174,6 +140,12 @@
 	}
 </script>
 
+{#if showCadrerChallenge}
+	<CadrerChallenge 
+		onComplete={completeChallenge}
+		onBack={goBackFromChallenge}
+	/>
+{:else}
 <div class="challenges-container">
 	<!-- Header avec statistiques -->
 	<div class="header-section">
@@ -281,6 +253,7 @@
 		</div>
 	{/if}
 </div>
+{/if}
 
 <style>
 	.challenges-container {

@@ -61,10 +61,6 @@
 		</div>
 		<h1>La Lumière</h1>
 		<p class="subtitle">De La Ligne Argentique</p>
-		<div class="status-indicator">
-			<div class="status-dot" class:online={isOnline}></div>
-			<span>{isOnline ? 'En ligne' : 'Hors ligne'}</span>
-		</div>
 	</div>
 </div>
 
