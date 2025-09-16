@@ -21,6 +21,7 @@
 		"vite": "^7.0.4"
 	},
 	"dependencies": {
+		"@google-cloud/vision": "^5.3.3",
 		"@sveltejs/adapter-static": "^3.0.9",
 		"workbox-window": "^7.3.0"
 	}

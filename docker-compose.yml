@@ -1,0 +1,47 @@
+version: '3.8'
+
+services:
+  lalumiere:
+    build: .
+    container_name: lalumiere-app
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    environment:
+      - NODE_ENV=production
+      - PORT=3000
+    volumes:
+      - ./static:/usr/share/nginx/html/static:ro
+    networks:
+      - lalumiere-network
+
+  nginx:
+    image: nginx:alpine
+    container_name: lalumiere-nginx
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./static:/usr/share/nginx/html/static:ro
+      - ./ssl:/etc/nginx/ssl:ro
+    depends_on:
+      - lalumiere
+    networks:
+      - lalumiere-network
+
+  # Service pour Let's Encrypt (optionnel)
+  certbot:
+    image: certbot/certbot
+    container_name: lalumiere-certbot
+    volumes:
+      - ./ssl:/etc/letsencrypt
+      - ./static:/var/www/html:ro
+    command: certonly --webroot --webroot-path=/var/www/html --email your-email@example.com --agree-tos --no-eff-email -d your-domain.com
+    profiles:
+      - ssl
+
+networks:
+  lalumiere-network:
+    driver: bridge
