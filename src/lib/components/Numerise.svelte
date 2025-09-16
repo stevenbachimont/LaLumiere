@@ -396,37 +396,6 @@
 		left: 66%;
 	}
 
-	.permission-request {
-		text-align: center;
-		padding: 2rem;
-	}
-
-	.permission-icon {
-		font-size: 4rem;
-		margin-bottom: 1rem;
-	}
-
-	.permission-request h3 {
-		font-size: 1.5rem;
-		font-weight: 600;
-		color: #1f2937;
-		margin: 0 0 0.5rem 0;
-	}
-
-	.permission-request p {
-		color: #6b7280;
-		margin: 0 0 2rem 0;
-	}
-
-	.loading-spinner {
-		width: 40px;
-		height: 40px;
-		border: 4px solid #e5e7eb;
-		border-top: 4px solid #3b82f6;
-		border-radius: 50%;
-		animation: spin 1s linear infinite;
-		margin: 0 auto 1rem auto;
-	}
 
 	@keyframes spin {
 		0% { transform: rotate(0deg); }
@@ -444,7 +413,7 @@
 		justify-content: center;
 	}
 
-	.capture-button {
+	:global(.capture-button) {
 		width: 120px;
 		height: 120px;
 		border-radius: 50%;
@@ -606,7 +575,7 @@
 		padding: 1rem 1.5rem 2rem;
 	}
 
-	.preview-card {
+	:global(.preview-card) {
 		text-align: center;
 	}
 

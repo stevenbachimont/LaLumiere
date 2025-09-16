@@ -13,6 +13,7 @@
 		loading = false,
 		icon = '',
 		class: className = '',
+		children,
 		...restProps
 	}: {
 		variant?: ButtonVariant;
@@ -21,6 +22,7 @@
 		loading?: boolean;
 		icon?: string;
 		class?: string;
+		children?: import('svelte').Snippet;
 		[key: string]: any;
 	} = $props();
 
@@ -36,7 +38,7 @@
 	class:disabled
 	class:loading
 	{disabled}
-	on:click={handleClick}
+	onclick={handleClick}
 	{...restProps}
 >
 	{#if loading}
@@ -44,7 +46,7 @@
 	{:else if icon}
 		<span class="button-icon">{icon}</span>
 	{/if}
-	<slot />
+	{@render children?.()}
 </button>
 
 <style>

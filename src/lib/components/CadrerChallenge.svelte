@@ -3,7 +3,7 @@
 	import Camera from './Camera.svelte';
 	import MobileButton from './MobileButton.svelte';
 	import MobileCard from './MobileCard.svelte';
-	import { imageAnalysis } from '../services/imageAnalysis.js';
+	import { imageAnalysis } from '../services/imageAnalysis';
 
 	// Props
 	export let onComplete: (success: boolean) => void;
@@ -114,7 +114,7 @@
 		
 		try {
 			// IA désactivée - utilisation de l'algorithme classique uniquement
-			let aiAnalysis = null;
+			let aiAnalysis: { score: number; reason: string } | null = null;
 			
 			// Charger l'image de référence
 			const referenceImage = await loadImage(referenceImagePath);
@@ -166,8 +166,8 @@
 			
 			if (aiAnalysis) {
 				// Utiliser l'IA pour le score final
-				similarity = aiAnalysis.score;
-				feedback = aiAnalysis.reason;
+				similarity = (aiAnalysis as { score: number; reason: string }).score;
+				feedback = (aiAnalysis as { score: number; reason: string }).reason;
 				console.log('🧠 Score basé sur l\'IA:', similarity, feedback);
 			} else {
 				// Algorithme classique optimisé pour les images de rue
@@ -886,7 +886,7 @@
 		margin-bottom: 1.5rem;
 	}
 
-	.camera-card {
+	:global(.camera-card) {
 		overflow: hidden;
 	}
 
@@ -993,7 +993,7 @@
 		justify-content: center;
 	}
 
-	.capture-button {
+	:global(.capture-button) {
 		font-size: 1.1rem;
 		padding: 0.75rem 2rem;
 	}
@@ -1023,12 +1023,12 @@
 		justify-content: center;
 	}
 
-	.success-button {
+	:global(.success-button) {
 		background: #10b981;
 		border-color: #10b981;
 	}
 
-	.success-button:hover {
+	:global(.success-button:hover) {
 		background: #059669;
 		border-color: #059669;
 	}
@@ -1065,12 +1065,12 @@
 		justify-content: center;
 	}
 
-	.abandon-button {
+	:global(.abandon-button) {
 		color: #ef4444;
 		border-color: #ef4444;
 	}
 
-	.abandon-button:hover {
+	:global(.abandon-button:hover) {
 		background: #fef2f2;
 	}
 

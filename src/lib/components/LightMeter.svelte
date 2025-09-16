@@ -434,11 +434,6 @@
 		margin: 0 0 2rem 0;
 	}
 
-	.controls-section {
-		padding: 1rem 1.5rem;
-		background: white;
-		border-top: 1px solid #e5e7eb;
-	}
 
 	.measurement-status {
 		display: flex;
@@ -481,7 +476,7 @@
 		gap: 1rem;
 	}
 
-	.measurement-card {
+	:global(.measurement-card) {
 		text-align: center;
 	}
 

@@ -10,4 +10,23 @@ declare global {
 	}
 }
 
+// Types pour l'application
+export interface ChallengeType {
+	name: string;
+	images: string[];
+}
+
+export interface AnalysisResult {
+	similarity: number;
+	edgeMatch: number;
+	colorMatch: number;
+	compositionMatch: number;
+	feedback: string;
+}
+
+export interface CameraPermission {
+	granted: boolean;
+	error?: string;
+}
+
 export {};

@@ -1,12 +1,12 @@
 // Enregistrement du Service Worker
-export function registerSW() {
+export function registerSW(): void {
   if ('serviceWorker' in navigator) {
     window.addEventListener('load', () => {
       navigator.serviceWorker.register('/sw.js')
-        .then((registration) => {
+        .then((registration: ServiceWorkerRegistration) => {
           console.log('SW enregistré avec succès:', registration);
         })
-        .catch((registrationError) => {
+        .catch((registrationError: Error) => {
           console.log('Échec de l\'enregistrement du SW:', registrationError);
         });
     });

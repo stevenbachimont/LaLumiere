@@ -130,26 +130,6 @@
 		margin: 0 0 1.5rem 0;
 	}
 
-	.status-indicator {
-		display: flex;
-		align-items: center;
-		justify-content: center;
-		gap: 0.5rem;
-		font-size: 0.9rem;
-		opacity: 0.8;
-	}
-
-	.status-dot {
-		width: 8px;
-		height: 8px;
-		border-radius: 50%;
-		background-color: #ef4444;
-		transition: background-color 0.3s ease;
-	}
-
-	.status-dot.online {
-		background-color: #10b981;
-	}
 
 	.features-section {
 		padding: 0 1.5rem 2rem;
@@ -159,12 +139,6 @@
 	}
 
 
-	.actions-section {
-		padding: 0 1.5rem 2rem;
-		display: flex;
-		flex-direction: column;
-		gap: 1rem;
-	}
 
 
 	/* Responsive design */
@@ -183,7 +157,7 @@
 	}
 
 	/* Animations d'entrée */
-	.hero-section, .actions-section {
+	.hero-section {
 		animation: fadeInUp 0.6s ease-out;
 	}
 

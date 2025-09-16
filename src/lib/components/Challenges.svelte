@@ -21,7 +21,7 @@
 	let activeChallenge: Challenge | null = null;
 	let challengeTimer: number = 0;
 	let isChallengeActive = false;
-	let timerInterval: number | null = null;
+	let timerInterval: ReturnType<typeof setInterval> | null = null;
 	let showCadrerChallenge = false;
 
 	onMount(() => {
@@ -296,7 +296,7 @@
 		margin-bottom: 2rem;
 	}
 
-	.active-challenge-card {
+	:global(.active-challenge-card) {
 		background: linear-gradient(135deg, #3b82f6, #1d4ed8);
 		color: white;
 	}
@@ -352,12 +352,12 @@
 		justify-content: center;
 	}
 
-	.success-button {
+	:global(.success-button) {
 		background: #10b981;
 		border-color: #10b981;
 	}
 
-	.success-button:hover {
+	:global(.success-button:hover) {
 		background: #059669;
 		border-color: #059669;
 	}
@@ -379,11 +379,11 @@
 		gap: 1rem;
 	}
 
-	.challenge-card {
+	:global(.challenge-card) {
 		transition: all 0.2s ease;
 	}
 
-	.challenge-card.completed {
+	:global(.challenge-card.completed) {
 		opacity: 0.7;
 		background: #f0fdf4;
 		border: 1px solid #bbf7d0;

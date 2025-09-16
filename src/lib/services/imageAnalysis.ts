@@ -1,10 +1,47 @@
 // Service d'analyse d'images avec algorithmes gratuits
+export interface ImageAnalysisResult {
+  labels: Array<{ description: string; score: number }>;
+  objects: Array<{ name: string; score: number; boundingBox?: any }>;
+  composition: {
+    ruleOfThirds: number;
+    symmetry: number;
+    centerFocus: boolean;
+  };
+  colors: {
+    average: { r: number; g: number; b: number };
+    isGrayscale: boolean;
+    isColorful: boolean;
+    dominantColor: string;
+  };
+}
+
+export interface ColorAnalysis {
+  average: { r: number; g: number; b: number };
+  isGrayscale: boolean;
+  isColorful: boolean;
+  dominantColor: string;
+}
+
+export interface CompositionAnalysis {
+  ruleOfThirds: number;
+  symmetry: number;
+  centerFocus: boolean;
+}
+
+export interface GoogleVisionResponse {
+  responses: Array<{
+    labelAnnotations?: Array<{ description: string; score: number }>;
+    localizedObjectAnnotations?: Array<{ name: string; score: number; boundingPoly: any }>;
+    textAnnotations?: Array<{ description: string; score: number }>;
+  }>;
+}
+
 export class ImageAnalysisService {
   constructor() {
     // Pas de clé API nécessaire - algorithmes gratuits
   }
 
-  async analyzeImage(imageData) {
+  async analyzeImage(imageData: string): Promise<ImageAnalysisResult | null> {
     try {
       // Analyser l'image avec des algorithmes gratuits
       return await this.analyzeWithFreeAlgorithms(imageData);
@@ -14,37 +51,40 @@ export class ImageAnalysisService {
     }
   }
 
-  async analyzeWithFreeAlgorithms(imageData) {
+  async analyzeWithFreeAlgorithms(imageData: string): Promise<ImageAnalysisResult> {
     // Créer un canvas pour analyser l'image
     const canvas = document.createElement('canvas');
     const ctx = canvas.getContext('2d');
+    if (!ctx) throw new Error('Impossible de créer le contexte canvas');
+    
     const img = new Image();
     
-    return new Promise((resolve) => {
+    return new Promise((resolve, reject) => {
       img.onload = () => {
         canvas.width = img.width;
         canvas.height = img.height;
         ctx.drawImage(img, 0, 0);
         
-        const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+        const imageDataObj = ctx.getImageData(0, 0, canvas.width, canvas.height);
         
         // Analyser les caractéristiques de l'image
-        const analysis = {
-          labels: this.detectImageType(imageData),
-          objects: this.detectObjects(imageData),
-          composition: this.analyzeComposition(imageData),
-          colors: this.analyzeColors(imageData)
+        const analysis: ImageAnalysisResult = {
+          labels: this.detectImageType(imageDataObj),
+          objects: this.detectObjects(imageDataObj),
+          composition: this.analyzeComposition(imageDataObj),
+          colors: this.analyzeColors(imageDataObj)
         };
         
         resolve(analysis);
       };
       
+      img.onerror = () => reject(new Error('Erreur lors du chargement de l\'image'));
       img.src = imageData;
     });
   }
 
   // Détecter le type d'image (portrait, paysage, architecture)
-  detectImageType(imageData) {
+  detectImageType(imageData: ImageData): Array<{ description: string; score: number }> {
     const { width, height, data } = imageData;
     const aspectRatio = width / height;
     
@@ -56,7 +96,7 @@ export class ImageAnalysisService {
     // Analyser la complexité
     const complexity = this.calculateComplexity(imageData);
     
-    const labels = [];
+    const labels: string[] = [];
     
     // Détecter le type de composition
     if (aspectRatio > 1.5) {
@@ -95,8 +135,8 @@ export class ImageAnalysisService {
   }
   
   // Détecter les objets basiques
-  detectObjects(imageData) {
-    const objects = [];
+  detectObjects(imageData: ImageData): Array<{ name: string; score: number }> {
+    const objects: Array<{ name: string; score: number }> = [];
     
     // Détecter les formes géométriques
     if (this.hasRectangularShapes(imageData)) {
@@ -111,7 +151,7 @@ export class ImageAnalysisService {
   }
   
   // Analyser la composition
-  analyzeComposition(imageData) {
+  analyzeComposition(imageData: ImageData): CompositionAnalysis {
     const { width, height } = imageData;
     const centerX = width / 2;
     const centerY = height / 2;
@@ -130,7 +170,7 @@ export class ImageAnalysisService {
   }
   
   // Analyser les couleurs
-  analyzeColors(imageData) {
+  analyzeColors(imageData: ImageData): ColorAnalysis {
     const { data } = imageData;
     let r = 0, g = 0, b = 0;
     let grayscaleCount = 0;
@@ -170,9 +210,14 @@ export class ImageAnalysisService {
     };
   }
 
-  parseGoogleResponse(response) {
+  parseGoogleResponse(response: GoogleVisionResponse): ImageAnalysisResult {
     if (!response.responses || !response.responses[0]) {
-      return { labels: [], objects: [], text: [] };
+      return { 
+        labels: [], 
+        objects: [], 
+        composition: { ruleOfThirds: 0, symmetry: 0, centerFocus: false },
+        colors: { average: { r: 0, g: 0, b: 0 }, isGrayscale: false, isColorful: false, dominantColor: 'gray' }
+      };
     }
 
     const data = response.responses[0];
@@ -186,15 +231,17 @@ export class ImageAnalysisService {
         score: obj.score,
         boundingBox: obj.boundingPoly
       })) || [],
+      composition: { ruleOfThirds: 0, symmetry: 0, centerFocus: false },
+      colors: { average: { r: 0, g: 0, b: 0 }, isGrayscale: false, isColorful: false, dominantColor: 'gray' },
       text: data.textAnnotations?.map(text => ({
         description: text.description,
         score: text.score
       })) || []
-    };
+    } as ImageAnalysisResult & { text: Array<{ description: string; score: number }> };
   }
 
   // Fonctions utilitaires pour l'analyse
-  calculateComplexity(imageData) {
+  calculateComplexity(imageData: ImageData): number {
     const { data, width, height } = imageData;
     let totalVariation = 0;
     
@@ -219,7 +266,7 @@ export class ImageAnalysisService {
     return Math.min(totalVariation / (width * height * 255), 1);
   }
   
-  isLikelyPortrait(imageData) {
+  isLikelyPortrait(imageData: ImageData): boolean {
     const { width, height } = imageData;
     const aspectRatio = width / height;
     
@@ -227,7 +274,7 @@ export class ImageAnalysisService {
     return aspectRatio < 1 && this.hasCenterFocus(imageData, width/2, height/2);
   }
   
-  isLikelyArchitecture(imageData) {
+  isLikelyArchitecture(imageData: ImageData): boolean {
     const { width, height } = imageData;
     const aspectRatio = width / height;
     
@@ -235,7 +282,7 @@ export class ImageAnalysisService {
     return aspectRatio > 1.2 && this.hasRectangularShapes(imageData);
   }
   
-  hasRectangularShapes(imageData) {
+  hasRectangularShapes(imageData: ImageData): boolean {
     // Détection basique de lignes droites
     const { data, width, height } = imageData;
     let straightLines = 0;
@@ -261,7 +308,7 @@ export class ImageAnalysisService {
     return straightLines > (width * height) / 1000;
   }
   
-  hasCircularShapes(imageData) {
+  hasCircularShapes(imageData: ImageData): boolean {
     // Détection basique de formes circulaires
     const { data, width, height } = imageData;
     const centerX = width / 2;
@@ -292,14 +339,14 @@ export class ImageAnalysisService {
     return symmetricPixels > 18; // Plus de 50% de symétrie
   }
   
-  hasCenterFocus(imageData, centerX, centerY) {
+  hasCenterFocus(imageData: ImageData, centerX: number, centerY: number): boolean {
     const { data, width, height } = imageData;
     const centerIdx = (Math.floor(centerY) * width + Math.floor(centerX)) * 4;
     const centerBrightness = (data[centerIdx] + data[centerIdx + 1] + data[centerIdx + 2]) / 3;
     
     // Vérifier si le centre est plus lumineux que les bords
     let edgeBrightness = 0;
-    const edgePixels = [
+    const edgePixels: Array<[number, number]> = [
       [0, 0], [width-1, 0], [0, height-1], [width-1, height-1]
     ];
     
@@ -311,13 +358,13 @@ export class ImageAnalysisService {
     return centerBrightness > (edgeBrightness / edgePixels.length) + 20;
   }
   
-  analyzeRuleOfThirds(imageData) {
+  analyzeRuleOfThirds(imageData: ImageData): number {
     const { width, height } = imageData;
     const thirdX = width / 3;
     const thirdY = height / 3;
     
     // Analyser les points d'intersection de la règle des tiers
-    const points = [
+    const points: Array<[number, number]> = [
       [thirdX, thirdY],
       [thirdX * 2, thirdY],
       [thirdX, thirdY * 2],
@@ -334,7 +381,7 @@ export class ImageAnalysisService {
     return focusPoints / points.length;
   }
   
-  analyzeSymmetry(imageData) {
+  analyzeSymmetry(imageData: ImageData): number {
     const { data, width, height } = imageData;
     let symmetricPixels = 0;
     let totalPixels = 0;
@@ -358,7 +405,7 @@ export class ImageAnalysisService {
     return symmetricPixels / totalPixels;
   }
   
-  getDominantColor(r, g, b) {
+  getDominantColor(r: number, g: number, b: number): string {
     if (r > g && r > b) return 'red';
     if (g > r && g > b) return 'green';
     if (b > r && b > g) return 'blue';
@@ -367,7 +414,7 @@ export class ImageAnalysisService {
   }
 
   // Détecter si les images sont compatibles
-  areImagesCompatible(analysis1, analysis2) {
+  areImagesCompatible(analysis1: ImageAnalysisResult | null, analysis2: ImageAnalysisResult | null): boolean {
     if (!analysis1 || !analysis2) return false;
 
     // Vérifier les labels principaux
@@ -375,7 +422,7 @@ export class ImageAnalysisService {
     const labels2 = analysis2.labels.map(l => l.description.toLowerCase());
 
     // Types incompatibles
-    const incompatibleTypes = [
+    const incompatibleTypes: Array<[string, string]> = [
       ['person', 'architecture'],
       ['person', 'landscape'],
       ['portrait', 'building'],
@@ -393,14 +440,14 @@ export class ImageAnalysisService {
   }
 
   // Calculer un score de similarité basé sur l'IA
-  calculateSimilarityScore(analysis1, analysis2) {
+  calculateSimilarityScore(analysis1: ImageAnalysisResult | null, analysis2: ImageAnalysisResult | null): { score: number; reason: string } {
     if (!this.areImagesCompatible(analysis1, analysis2)) {
       return { score: 5, reason: 'Images incompatibles selon l\'IA' };
     }
 
     // Logique de calcul basée sur les labels et objets
-    const labels1 = analysis1.labels.map(l => l.description.toLowerCase());
-    const labels2 = analysis2.labels.map(l => l.description.toLowerCase());
+    const labels1 = analysis1!.labels.map(l => l.description.toLowerCase());
+    const labels2 = analysis2!.labels.map(l => l.description.toLowerCase());
     
     const commonLabels = labels1.filter(label => labels2.includes(label));
     const similarity = (commonLabels.length / Math.max(labels1.length, labels2.length)) * 100;

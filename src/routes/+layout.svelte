@@ -18,7 +18,7 @@
 </svelte:head>
 
 <main class="app-container">
-	<slot />
+	{@render children?.()}
 </main>
 
 <style>

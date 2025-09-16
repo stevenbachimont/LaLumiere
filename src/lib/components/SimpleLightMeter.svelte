@@ -609,6 +609,12 @@
 				<!-- Colonne Vitesse -->
 				<div 
 					class="value-column"
+					role="slider"
+					aria-label="Sélection de la vitesse d'obturation"
+					aria-valuenow={shutterSpeedValues.indexOf(manualSettings.shutterSpeed)}
+					aria-valuemin="0"
+					aria-valuemax={shutterSpeedValues.length - 1}
+					tabindex="0"
 					bind:this={shutterSpeedColumn}
 					ontouchstart={(e) => handleTouchStart(e, 'shutterSpeed')}
 					ontouchmove={(e) => handleTouchMove(e, 'shutterSpeed')}
@@ -635,6 +641,12 @@
 				<!-- Colonne Ouverture -->
 				<div 
 					class="value-column"
+					role="slider"
+					aria-label="Sélection de l'ouverture"
+					aria-valuenow={apertureValues.indexOf(manualSettings.aperture)}
+					aria-valuemin="0"
+					aria-valuemax={apertureValues.length - 1}
+					tabindex="0"
 					bind:this={apertureColumn}
 					ontouchstart={(e) => handleTouchStart(e, 'aperture')}
 					ontouchmove={(e) => handleTouchMove(e, 'aperture')}
@@ -661,6 +673,12 @@
 				<!-- Colonne ISO -->
 				<div 
 					class="value-column"
+					role="slider"
+					aria-label="Sélection de l'ISO"
+					aria-valuenow={isoValues.indexOf(manualSettings.iso)}
+					aria-valuemin="0"
+					aria-valuemax={isoValues.length - 1}
+					tabindex="0"
 					bind:this={isoColumn}
 					ontouchstart={(e) => handleTouchStart(e, 'iso')}
 					ontouchmove={(e) => handleTouchMove(e, 'iso')}
@@ -987,9 +1005,6 @@
 		justify-content: center;
 	}
 
-	.value-item.active {
-		/* Pas de mise en surbrillance - la bande bleue indique la sélection */
-	}
 
 	.value-item.locked {
 		opacity: 0.5;

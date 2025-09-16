@@ -10,6 +10,7 @@
 		image = '',
 		clickable = false,
 		class: className = '',
+		children,
 		...restProps
 	}: {
 		title?: string;
@@ -18,6 +19,7 @@
 		image?: string;
 		clickable?: boolean;
 		class?: string;
+		children?: import('svelte').Snippet;
 		[key: string]: any;
 	} = $props();
 
@@ -31,7 +33,7 @@
 <div
 	class="mobile-card {className}"
 	class:clickable
-	on:click={handleClick}
+	onclick={handleClick}
 	{...restProps}
 >
 	{#if image}
@@ -54,7 +56,7 @@
 		{/if}
 
 		<div class="card-body">
-			<slot />
+			{@render children?.()}
 		</div>
 	</div>
 
